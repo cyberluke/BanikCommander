@@ -7,7 +7,7 @@
     Description = 'A PowerShell voice command tool with OpenAI integration for automated PowerShell and AzureAD tasks. Requires Windows platform for voice recognition.'
     PowerShellVersion = '5.1'
     DotNetFrameworkVersion = '4.7.2'
-    FunctionsToExport = @('Start-VoiceCommand', 'Set-OpenAIConfig')
+    FunctionsToExport = @('Start-VoiceCommand', 'Set-OpenAIConfig', 'Get-VoiceCommanderConfig')
     CmdletsToExport = @()
     VariablesToExport = '*'
     AliasesToExport = @()
