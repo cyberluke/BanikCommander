@@ -12,7 +12,7 @@ function Test-ModuleEnvironment {
         SpeechAvailable = $false
         ConfigurationAvailable = $false
         ConfigurationValid = $false
-        ConfigurationPath = Join-Path $env:USERPROFILE '.voicecommander' 'config.json'
+        ConfigurationPath = Join-Path $env:USERPROFILE '.banikcommander' 'config.json'
     }
 
     # Test Speech capabilities
@@ -31,7 +31,7 @@ function Test-ModuleEnvironment {
     if (Test-Path -Path $Results.ConfigurationPath) {
         $Results.ConfigurationAvailable = $true
         try {
-            $Config = Get-VoiceCommanderConfig
+            $Config = Get-BanikCommanderConfig
             if ($null -ne $Config -and -not [string]::IsNullOrEmpty($Config.OpenAIKey)) {
                 $Results.ConfigurationValid = $true
                 Write-Verbose "OpenAI configuration found and valid"

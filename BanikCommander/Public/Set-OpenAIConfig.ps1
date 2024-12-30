@@ -8,7 +8,7 @@ function Set-OpenAIConfig {
     Write-Host "Configuring OpenAI API key..." -ForegroundColor Cyan
 
     # Basic validation of API key format
-    if (-not ($ApiKey -match '^sk-[a-zA-Z0-9]{48}$')) {
+    if (-not ($ApiKey -match '^sk-[A-Za-z0-9_]+$')) {
         Write-Warning "The provided API key doesn't match the expected format (sk-...)."
         Write-Host "API key should start with 'sk-' followed by 48 characters." -ForegroundColor Yellow
         $Confirm = Read-Host "Do you want to continue anyway? (Y/N)"
@@ -19,7 +19,7 @@ function Set-OpenAIConfig {
     }
 
     # Test if we can create the configuration directory
-    $ConfigPath = Join-Path $env:USERPROFILE '.voicecommander'
+    $ConfigPath = Join-Path $env:USERPROFILE '.banikcommander'
     if (-not (Test-Path -Path $ConfigPath)) {
         try {
             New-Item -ItemType Directory -Path $ConfigPath -Force | Out-Null
@@ -34,11 +34,11 @@ function Set-OpenAIConfig {
     $Result = Set-VoiceCommanderConfig -OpenAIKey $ApiKey
     if ($Result) {
         Write-Host "OpenAI API key configured successfully." -ForegroundColor Green
-        Write-Host "You can now use Start-VoiceCommand without specifying the API key." -ForegroundColor Cyan
-        Write-Host "Configuration stored securely in $env:USERPROFILE\.voicecommander" -ForegroundColor Gray
+        Write-Host "You can now use Start-Banik without specifying the API key." -ForegroundColor Cyan
+        Write-Host "Configuration stored securely in $env:USERPROFILE\.banikcommander" -ForegroundColor Gray
 
         # Verify the configuration can be read back
-        $Config = Get-VoiceCommanderConfig
+        $Config = Get-BanikCommanderConfig
         if ($null -eq $Config) {
             Write-Warning "Configuration was saved but could not be verified. You may need to run Set-OpenAIConfig again."
         }

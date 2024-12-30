@@ -1,10 +1,10 @@
-function Get-VoiceCommanderConfig {
+function Get-BanikCommanderConfig {
     [CmdletBinding()]
     param()
 
     try {
         # Define configuration path
-        $ConfigPath = Join-Path $env:USERPROFILE '.voicecommander'
+        $ConfigPath = Join-Path $env:USERPROFILE '.banikcommander'
         $ConfigFile = Join-Path $ConfigPath 'config.json'
 
         # Check if config exists

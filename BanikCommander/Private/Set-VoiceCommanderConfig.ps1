@@ -7,18 +7,13 @@ function Set-VoiceCommanderConfig {
 
     try {
         # Define configuration path
-        $ConfigPath = Join-Path $env:USERPROFILE '.voicecommander'
+        $ConfigPath = Join-Path $env:USERPROFILE '.banikcommander'
         $ConfigFile = Join-Path $ConfigPath 'config.json'
 
         # Create directory if it doesn't exist
         if (-not (Test-Path -Path $ConfigPath)) {
             New-Item -ItemType Directory -Path $ConfigPath -Force | Out-Null
             Write-Verbose "Created configuration directory: $ConfigPath"
-        }
-
-        # Validate OpenAI key format (basic check)
-        if (-not ($OpenAIKey -match '^sk-[a-zA-Z0-9]{48}$')) {
-            Write-Warning "The OpenAI key format appears incorrect. Please verify your API key."
         }
 
         # Create or update configuration
