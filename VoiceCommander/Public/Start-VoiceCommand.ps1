@@ -14,6 +14,11 @@ function Start-VoiceCommand {
     begin {
         Write-Verbose "Starting Voice Commander..."
 
+        # Validate OpenAI API Key
+        if ([string]::IsNullOrEmpty($OpenAIKey)) {
+            throw "OpenAI API Key is required. Please provide a valid API key."
+        }
+
         # Ensure log directory exists
         if (-not (Test-Path -Path $LogPath)) {
             New-Item -ItemType Directory -Path $LogPath -Force | Out-Null

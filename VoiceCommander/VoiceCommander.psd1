@@ -5,10 +5,14 @@
     Author = 'VoiceCommander'
     Description = 'A PowerShell voice command tool with OpenAI integration'
     PowerShellVersion = '5.1'
+    RequiredAssemblies = @('System.Speech')
     FunctionsToExport = @('Start-VoiceCommand')
+    CmdletsToExport = @()
+    VariablesToExport = '*'
+    AliasesToExport = @()
     PrivateData = @{
         PSData = @{
-            Tags = @('Voice', 'OpenAI', 'PowerShell', 'Automation')
+            Tags = @('Voice', 'OpenAI', 'PowerShell', 'Automation', 'Speech', 'AI')
             LicenseUri = ''
             ProjectUri = ''
             ReleaseNotes = 'Initial release'

@@ -22,13 +22,53 @@ try {
 
 # Import all public/private functions
 Write-Verbose "Importing functions from $ModulePath"
-$Public = @(Get-ChildItem -Path $ModulePath\Public\*.ps1 -ErrorAction SilentlyContinue)
-$Private = @(Get-ChildItem -Path $ModulePath\Private\*.ps1 -ErrorAction SilentlyContinue)
+
+# Verify directory structure
+$PublicPath = Join-Path $ModulePath 'Public'
+$PrivatePath = Join-Path $ModulePath 'Private'
+
+if (-not (Test-Path -Path $PublicPath)) {
+    Write-Error "Public directory not found at: $PublicPath"
+    throw "Module directory structure is invalid"
+}
+
+if (-not (Test-Path -Path $PrivatePath)) {
+    Write-Error "Private directory not found at: $PrivatePath"
+    throw "Module directory structure is invalid"
+}
+
+# Import functions with timeouts
+$TimeoutSeconds = 30
+$Job = Start-Job -ScriptBlock {
+    param($PublicPath, $PrivatePath)
+    $Public = @(Get-ChildItem -Path $PublicPath\*.ps1 -ErrorAction SilentlyContinue)
+    $Private = @(Get-ChildItem -Path $PrivatePath\*.ps1 -ErrorAction SilentlyContinue)
+    return @{
+        Public = $Public
+        Private = $Private
+    }
+} -ArgumentList $PublicPath, $PrivatePath
+
+$Result = $Job | Wait-Job -Timeout $TimeoutSeconds | Receive-Job
+Remove-Job -Job $Job -Force -ErrorAction SilentlyContinue
+
+if ($null -eq $Result) {
+    Write-Error "Timeout while loading module files"
+    throw "Module loading timed out after $TimeoutSeconds seconds"
+}
+
+$Public = $Result.Public
+$Private = $Result.Private
 
 Write-Verbose "Found $($Public.Count) public and $($Private.Count) private functions"
 
+if ($Public.Count -eq 0 -and $Private.Count -eq 0) {
+    Write-Error "No PowerShell scripts found in module directories"
+    throw "Module contains no functions"
+}
+
 # Dot source the files
-foreach ($Import in @($Public + $Private)) {
+foreach ($Import in @($Private + $Public)) {
     try {
         Write-Verbose "Importing $($Import.FullName)"
         . $Import.FullName
@@ -41,5 +81,11 @@ foreach ($Import in @($Public + $Private)) {
 }
 
 # Export public functions
-Write-Verbose "Exporting public functions: $($Public.BaseName -join ', ')"
-Export-ModuleMember -Function $Public.BaseName -Verbose:$VerbosePreference
+$PublicFunctions = $Public.BaseName
+Write-Verbose "Exporting public functions: $($PublicFunctions -join ', ')"
+
+if ($PublicFunctions.Count -gt 0) {
+    Export-ModuleMember -Function $PublicFunctions -Verbose:$VerbosePreference
+} else {
+    Write-Warning "No public functions found to export"
+}
