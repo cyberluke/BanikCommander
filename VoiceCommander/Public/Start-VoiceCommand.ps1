@@ -132,7 +132,7 @@ function Start-VoiceCommand {
                     $RetryCount = 0
                     $Success = $false
 
-                    # Pre-execution module check
+                    # Pre-execution module check for known modules
                     if ($CommandResult.Command -match 'Azure[AD]*') {
                         Write-Verbose "Azure AD command detected, checking module..."
                         $ModuleInstalled = Install-RequiredModule -ModuleName 'AzureAD'
@@ -143,13 +143,15 @@ function Start-VoiceCommand {
 
                     while (-not $Success -and $RetryCount -lt $MaxRetries) {
                         try {
-                            Write-Verbose "Attempt $($RetryCount + 1) of $MaxRetries"
+                            Write-Verbose "Execution attempt $($RetryCount + 1) of $MaxRetries"
 
-                            # Determine command type
+                            # Determine command type and required modules
                             $IsFileOperation = $CommandResult.Command -match '(Get-Content|Out-File|Export-Csv)'
                             Write-Verbose "Is file operation: $IsFileOperation"
 
                             # Execute command
+                            $ExecutionResult = $null
+                            Write-Verbose "Executing command: $($CommandResult.Command)"
                             $ExecutionResult = Invoke-Expression -Command $CommandResult.Command
                             Write-Verbose "Command executed successfully"
 
@@ -166,6 +168,7 @@ function Start-VoiceCommand {
                         catch {
                             $ErrorMessage = $_.Exception.Message
                             Write-Verbose "Execution error: $ErrorMessage"
+                            Write-Verbose "Exception type: $($_.Exception.GetType().Name)"
 
                             if ($ErrorMessage -match "The term '.*' is not recognized") {
                                 Write-Verbose "Command not found, attempting module installation..."
@@ -176,6 +179,7 @@ function Start-VoiceCommand {
                                     Write-Verbose "Attempting to install module: $ModuleName"
 
                                     if (Install-RequiredModule -ModuleName $ModuleName) {
+                                        Write-Host "Required module installed. Retrying command..." -ForegroundColor Yellow
                                         $RetryCount++
                                         continue
                                     }
