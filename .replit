@@ -1,0 +1,33 @@
+modules = ["powershell"]
+
+[nix]
+channel = "stable-24_05"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "VoiceCommander"
+
+[[workflows.workflow]]
+name = "VoiceCommander"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pwsh -Command \"Import-Module ./VoiceCommander/VoiceCommander.psm1; Start-VoiceCommand -OpenAIKey $env:OPENAI_API_KEY\""
+
+[deployment]
+run = ["sh", "-c", "pwsh -Command \"Import-Module ./VoiceCommander/VoiceCommander.psm1; Start-VoiceCommand -OpenAIKey $env:OPENAI_API_KEY\""]
