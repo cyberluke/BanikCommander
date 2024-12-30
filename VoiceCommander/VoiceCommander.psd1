@@ -33,5 +33,7 @@
         'Private\Test-CommandSafety.ps1'
         'Private\Test-ModuleEnvironment.ps1'
         'Private\Write-CommandLog.ps1'
+        'Private\Handle-CommandOutput.ps1'
+        'Private\Install-RequiredModule.ps1'
     )
 }

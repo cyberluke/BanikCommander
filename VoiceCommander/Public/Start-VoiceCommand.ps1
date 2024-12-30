@@ -60,6 +60,7 @@ function Start-VoiceCommand {
         Write-Host "- List all services" -ForegroundColor Cyan
         Write-Host "- Get computer information" -ForegroundColor Cyan
         Write-Host "- Show Azure AD users" -ForegroundColor Cyan
+        Write-Host "- Show content of README.md" -ForegroundColor Cyan
     }
 
     process {
@@ -133,45 +134,35 @@ function Start-VoiceCommand {
 
                     while (-not $Success -and $RetryCount -lt $MaxRetries) {
                         try {
-                            $ExecutionResult = Invoke-Expression -Command $CommandResult.Command
-                            $Success = $true
+                            Write-Verbose "Attempt $($RetryCount + 1) of $MaxRetries"
 
-                            # Handle command output
-                            Write-Host "`nCommand Output:" -ForegroundColor Green
-                            if ($null -ne $ExecutionResult) {
-                                if ($CommandResult.Command -match 'Get-Content|Out-File|Export-Csv') {
-                                    # For file operations, ensure content is displayed
-                                    $ExecutionResult | Out-Host
-                                } else {
-                                    # For other commands, use Format-Table with auto-size
-                                    $ExecutionResult | Format-Table -AutoSize | Out-Host
+                            # Check for Azure AD commands and ensure module is available
+                            if ($CommandResult.Command -match 'Azure[AD]*') {
+                                Write-Verbose "Azure AD command detected, checking module..."
+                                if (-not (Install-RequiredModule -ModuleName 'AzureAD')) {
+                                    throw "Failed to install AzureAD module"
                                 }
-                            } else {
-                                Write-Host "Command executed successfully but returned no output." -ForegroundColor Yellow
                             }
 
+                            # Execute command based on type
+                            $IsFileOperation = $CommandResult.Command -match 'Get-Content|Out-File|Export-Csv'
+                            $ExecutionResult = Invoke-Expression -Command $CommandResult.Command
+
+                            # Handle the output
+                            Handle-CommandOutput -Command $CommandResult.Command -Result $ExecutionResult -IsFileOperation:$IsFileOperation
+
+                            $Success = $true
                             Write-CommandLog -Command $CommandResult.Command -Success $true -LogPath $LogPath
                         }
                         catch {
                             $ErrorMessage = $_.Exception.Message
+                            Write-Verbose "Execution error: $ErrorMessage"
 
-                            # Check if error is due to missing module
-                            if ($ErrorMessage -match "is not recognized as the name of a cmdlet") {
-                                $ModuleName = if ($CommandResult.Command -match 'Azure[AD]*') { 'AzureAD' } else { $null }
-
-                                if ($null -ne $ModuleName) {
-                                    Write-Host "Required module '$ModuleName' not found. Attempting to install..." -ForegroundColor Yellow
-                                    try {
-                                        Install-Module -Name $ModuleName -Force -AllowClobber -Scope CurrentUser
-                                        Import-Module -Name $ModuleName -Force
-                                        Write-Host "Successfully installed and imported module '$ModuleName'" -ForegroundColor Green
-                                        $RetryCount++
-                                        continue
-                                    }
-                                    catch {
-                                        Write-Error "Failed to install module '$ModuleName': $_"
-                                        break
-                                    }
+                            if ($ErrorMessage -match "The term '.*' is not recognized as the name of a cmdlet") {
+                                if ($CommandResult.Command -match 'Azure[AD]*') {
+                                    Write-Verbose "Retrying after module installation failure..."
+                                    $RetryCount++
+                                    continue
                                 }
                             }
 
