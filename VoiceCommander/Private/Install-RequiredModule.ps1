@@ -21,10 +21,16 @@ function Install-RequiredModule {
             'SQL' = 'SQLServer'
             'SPO' = 'Microsoft.Online.SharePoint.PowerShell'
             'PnP' = 'PnP.PowerShell'
-            # Add additional Azure module mappings
             'AzureRM' = 'AzureRM'
             'AzureADPreview' = 'AzureADPreview'
             'Az' = 'Az'
+            # Add more specific Azure module mappings
+            'AzureRmAccount' = 'AzureRM'
+            'AzAccount' = 'Az'
+            'AzureADSync' = 'AzureADSync'
+            'AzureInformationProtection' = 'AIPService'
+            'MSGraph' = 'Microsoft.Graph'
+            'Office365' = 'MSOnline'
         }
 
         # If we have a mapping, use it
@@ -68,6 +74,10 @@ function Install-RequiredModule {
             # For Azure modules, use -AllowClobber and -SkipPublisherCheck
             Write-Verbose "Installing Azure module with special handling..."
             try {
+                # For Azure modules, ensure we're using TLS 1.2
+                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+                Write-Verbose "Set TLS 1.2 for Azure module installation"
+
                 Install-Module -Name $ModuleName -Force -AllowClobber -SkipPublisherCheck -Scope CurrentUser -ErrorAction Stop
             }
             catch {
@@ -77,24 +87,41 @@ function Install-RequiredModule {
                     'AzureAD' {
                         # Try AzureAD Preview if regular AzureAD fails
                         try {
+                            Write-Verbose "Attempting to install AzureADPreview as alternative..."
                             Install-Module -Name 'AzureADPreview' -Force -AllowClobber -SkipPublisherCheck -Scope CurrentUser -ErrorAction Stop
                             $ModuleName = 'AzureADPreview'
                             Write-Verbose "Successfully installed AzureADPreview as alternative"
                         }
                         catch {
                             Write-Error "Failed to install both AzureAD and AzureADPreview modules"
+                            Write-Verbose "Full error details: $($_ | Format-List -Force | Out-String)"
                             return $false
                         }
                     }
                     'Az' {
                         # For Az module, try installing core module first
                         try {
+                            Write-Verbose "Installing Az.Accounts core module..."
                             Install-Module -Name 'Az.Accounts' -Force -AllowClobber -SkipPublisherCheck -Scope CurrentUser -ErrorAction Stop
                             Write-Verbose "Successfully installed Az.Accounts core module"
                             Install-Module -Name $ModuleName -Force -AllowClobber -SkipPublisherCheck -Scope CurrentUser -ErrorAction Stop
                         }
                         catch {
                             Write-Error "Failed to install Az module and its dependencies"
+                            Write-Verbose "Full error details: $($_ | Format-List -Force | Out-String)"
+                            return $false
+                        }
+                    }
+                    default {
+                        Write-Verbose "Attempting to install module with basic Azure dependencies..."
+                        try {
+                            # Try installing Microsoft.PowerShell.Security first
+                            Install-Module -Name 'Microsoft.PowerShell.Security' -Force -SkipPublisherCheck -Scope CurrentUser -ErrorAction SilentlyContinue
+                            Install-Module -Name $ModuleName -Force -AllowClobber -SkipPublisherCheck -Scope CurrentUser -ErrorAction Stop
+                        }
+                        catch {
+                            Write-Error "Failed to install Azure module $ModuleName"
+                            Write-Verbose "Full error details: $($_ | Format-List -Force | Out-String)"
                             return $false
                         }
                     }
@@ -120,14 +147,35 @@ function Install-RequiredModule {
         Write-Verbose "Full error details: $($_ | Format-List -Force | Out-String)"
 
         # Provide more helpful error messages
-        if ($ErrorMessage -match "Unable to resolve package source") {
-            Write-Warning "Could not connect to PowerShell Gallery. Please check your internet connection."
-        }
-        elseif ($ErrorMessage -match "Access to the path.*is denied") {
-            Write-Warning "Access denied. Try running PowerShell as Administrator."
-        }
-        elseif ($ErrorMessage -match "assembly.*System.Management.Automation") {
-            Write-Warning "PowerShell version compatibility issue. Try using a newer PowerShell version."
+        switch -Regex ($ErrorMessage) {
+            "Unable to resolve package source" {
+                Write-Warning "Could not connect to PowerShell Gallery. Please check your internet connection."
+                Write-Warning "You can also try running: [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12"
+            }
+            "Access to the path.*is denied" {
+                Write-Warning "Access denied. Try running PowerShell as Administrator."
+                Write-Warning "Alternatively, try installing with -Scope CurrentUser flag."
+            }
+            "assembly.*System.Management.Automation" {
+                Write-Warning "PowerShell version compatibility issue. Try using PowerShell 5.1 or newer."
+                Write-Warning "Current PowerShell version: $($PSVersionTable.PSVersion)"
+            }
+            "Could not install.*AzureAD" {
+                Write-Warning "Failed to install AzureAD module. Trying alternative installation..."
+                Write-Warning "You can try manually installing the preview version: Install-Module AzureADPreview -AllowClobber"
+            }
+            "Could not load type.*Microsoft.Open.Azure" {
+                Write-Warning "Azure module dependency issue. Try installing Az.Accounts module first."
+                Write-Warning "Run: Install-Module -Name Az.Accounts -Force -AllowClobber"
+            }
+            "A parameter cannot be found that matches parameter name 'AllowPrerelease'" {
+                Write-Warning "Your PowerShellGet version might be outdated."
+                Write-Warning "Try updating it: Install-Module PowerShellGet -Force"
+            }
+            default {
+                Write-Warning "Installation failed with an unexpected error. Please check the error message and try again."
+                Write-Warning "If the issue persists, try manually installing the module: Install-Module $ModuleName -Scope CurrentUser"
+            }
         }
 
         return $false

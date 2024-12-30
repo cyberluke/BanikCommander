@@ -139,11 +139,81 @@ function Start-VoiceCommand {
                             $IsFileOperation = $CommandResult.Command -match '(Get-Content|Out-File|Export-Csv)'
                             Write-Verbose "Is file operation: $IsFileOperation"
 
-                            # Execute command
+                            # Execute command with automatic module installation
                             $ExecutionResult = $null
-                            Write-Verbose "Executing command: $($CommandResult.Command)"
-                            $ExecutionResult = Invoke-Expression -Command $CommandResult.Command
-                            Write-Verbose "Command executed successfully"
+                            try {
+                                Write-Verbose "Executing command: $($CommandResult.Command)"
+                                $ExecutionResult = Invoke-Expression -Command $CommandResult.Command
+                                Write-Verbose "Command executed successfully"
+                                $Success = $true
+                            }
+                            catch {
+                                $ErrorMessage = $_.Exception.Message
+                                Write-Verbose "Execution error: $ErrorMessage"
+                                Write-Verbose "Exception type: $($_.Exception.GetType().Name)"
+
+                                # Enhanced module detection from error message
+                                $ModuleName = $null
+                                $CommandParts = $CommandResult.Command -split ' ' | Select-Object -First 1
+                                Write-Verbose "Analyzing command part: $CommandParts"
+
+                                # Try to detect module from command structure first
+                                switch -Regex ($CommandParts) {
+                                    # Azure specific patterns
+                                    '^Get-Azure(AD|RM|Graph|Information)' { 
+                                        $ModuleName = switch -Regex ($Matches[1]) {
+                                            'AD' { 'AzureAD' }
+                                            'RM' { 'AzureRM' }
+                                            'Graph' { 'Microsoft.Graph' }
+                                            'Information' { 'AIPService' }
+                                        }
+                                        Write-Verbose "Detected Azure module: $ModuleName" 
+                                    }
+                                    '^Get-Msol' { $ModuleName = 'MSOnline'; Write-Verbose "Detected MSOnline module" }
+                                    '^Get-Team' { $ModuleName = 'MicrosoftTeams'; Write-Verbose "Detected Teams module" }
+                                    '^Get-SPO' { $ModuleName = 'Microsoft.Online.SharePoint.PowerShell'; Write-Verbose "Detected SharePoint module" }
+                                }
+
+                                # If no match found, try error message patterns
+                                if (-not $ModuleName) {
+                                    if ($ErrorMessage -match "The term '([\w\-\.]+)' is not recognized") {
+                                        $CommandName = $Matches[1]
+                                        Write-Verbose "Analyzing unrecognized command: $CommandName"
+
+                                        $ModuleName = switch -Regex ($CommandName) {
+                                            'Azure.*' { 'AzureAD' }
+                                            'AD.*' { 'ActiveDirectory' }
+                                            'Msol.*' { 'MSOnline' }
+                                            'Graph.*' { 'Microsoft.Graph' }
+                                            'Team.*' { 'MicrosoftTeams' }
+                                            'SPO.*' { 'Microsoft.Online.SharePoint.PowerShell' }
+                                            default { $null }
+                                        }
+                                        Write-Verbose "Detected module from error: $ModuleName"
+                                    }
+                                }
+
+                                if ($ModuleName) {
+                                    Write-Host "Detected missing module: $ModuleName" -ForegroundColor Yellow
+                                    Write-Host "Attempting to install required module..." -ForegroundColor Cyan
+
+                                    $InstallResult = Install-RequiredModule -ModuleName $ModuleName
+                                    if ($InstallResult) {
+                                        Write-Host "Successfully installed module: $ModuleName" -ForegroundColor Green
+                                        Write-Host "Retrying command..." -ForegroundColor Yellow
+                                        $RetryCount++
+                                        continue
+                                    } else {
+                                        Write-Warning "Failed to install module $ModuleName. Please try installing it manually:"
+                                        Write-Host "    Install-Module -Name $ModuleName -Force -AllowClobber" -ForegroundColor Cyan
+                                        break
+                                    }
+                                }
+
+                                Write-Host "Error executing command: $ErrorMessage" -ForegroundColor Red
+                                Write-CommandLog -Command $CommandResult.Command -Success $false -Error $ErrorMessage -LogPath $LogPath
+                                break
+                            }
 
                             # Handle the output based on command type
                             if ($null -ne $ExecutionResult) {
@@ -156,56 +226,10 @@ function Start-VoiceCommand {
                             Write-CommandLog -Command $CommandResult.Command -Success $true -LogPath $LogPath
                         }
                         catch {
-                            $ErrorMessage = $_.Exception.Message
-                            Write-Verbose "Execution error: $ErrorMessage"
-                            Write-Verbose "Exception type: $($_.Exception.GetType().Name)"
-
-                            # Enhanced module detection from error message
-                            $ModuleName = $null
-
-                            # Pattern 1: Direct module reference
-                            if ($ErrorMessage -match "The term '([\w\-\.]+)' is not recognized") {
-                                $CommandName = $Matches[1]
-                                Write-Verbose "Unrecognized command: $CommandName"
-
-                                # Try different patterns to extract module name
-                                switch -Regex ($CommandName) {
-                                    '^([\w\.]+)-' { $ModuleName = $Matches[1] }
-                                    '^Get-(Azure[\w]+)' { $ModuleName = 'Azure' }
-                                    '^Get-(AD[\w]+)' { $ModuleName = 'AD' }
-                                    '^Get-(MS[\w]+)' { $ModuleName = 'MSOnline' }
-                                    '^Get-(SPO[\w]+)' { $ModuleName = 'SharePoint' }
-                                    '^Get-(PnP[\w]+)' { $ModuleName = 'PnP' }
-                                    # Add more specific Azure patterns
-                                    'Get-AzureAD[\w]+' { $ModuleName = 'AzureAD' }
-                                    'Get-AzureRM[\w]+' { $ModuleName = 'AzureRM' }
-                                    'Get-Az[\w]+' { $ModuleName = 'Az' }
-                                }
-                            }
-                            # Pattern 2: Missing assembly reference
-                            elseif ($ErrorMessage -match "Could not load file or assembly '([\w\.]+)'") {
-                                $ModuleName = $Matches[1]
-                            }
-                            # Pattern 3: Missing module dependency
-                            elseif ($ErrorMessage -match "(The specified module|Module) '([\w\.]+)' was not loaded") {
-                                $ModuleName = $Matches[2]
-                            }
-
-                            if ($ModuleName) {
-                                Write-Verbose "Attempting to install module: $ModuleName"
-                                $InstallResult = Install-RequiredModule -ModuleName $ModuleName
-                                if ($InstallResult) {
-                                    Write-Host "Required module $ModuleName installed. Retrying command..." -ForegroundColor Yellow
-                                    $RetryCount++
-                                    continue
-                                } else {
-                                    Write-Warning "Failed to install module $ModuleName. Command execution may fail."
-                                }
-                            }
-
-                            Write-Host "Error executing command: $ErrorMessage" -ForegroundColor Red
+                            $ErrorMessage = "Error executing command: $($_.Exception.Message)"
+                            Write-Host $ErrorMessage -ForegroundColor Red
                             Write-CommandLog -Command $CommandResult.Command -Success $false -Error $ErrorMessage -LogPath $LogPath
-                            break
+                            $RetryCount++
                         }
                     }
                 }
