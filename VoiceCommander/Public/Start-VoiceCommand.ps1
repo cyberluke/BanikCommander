@@ -1,7 +1,7 @@
 function Start-VoiceCommand {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory)]
+        [Parameter()]
         [string]$OpenAIKey,
 
         [Parameter()]
@@ -17,9 +17,14 @@ function Start-VoiceCommand {
     begin {
         Write-Verbose "Starting Voice Commander..."
 
-        # Validate OpenAI API Key
+        # Get API key from parameter or config
         if ([string]::IsNullOrEmpty($OpenAIKey)) {
-            throw "OpenAI API Key is required. Please provide a valid API key."
+            Write-Verbose "No API key provided, attempting to load from configuration..."
+            $Config = Get-VoiceCommanderConfig
+            if ($null -eq $Config -or [string]::IsNullOrEmpty($Config.OpenAIKey)) {
+                throw "OpenAI API Key not found. Please configure it using Set-OpenAIConfig first."
+            }
+            $OpenAIKey = $Config.OpenAIKey
         }
 
         # Ensure log directory exists
