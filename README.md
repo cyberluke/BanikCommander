@@ -1,1 +1,2 @@
-Import-Module .\VoiceCommander\VoiceCommander.psm1
+git clone [repository-url]
+cd VoiceCommander
