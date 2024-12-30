@@ -73,3 +73,13 @@ if ($PublicFunctions.Count -gt 0) {
 } else {
     Write-Warning "No public functions found to export"
 }
+
+# Run environment tests
+Write-Verbose "Testing module environment..."
+$EnvTest = Test-ModuleEnvironment -Verbose
+Write-Verbose "Environment test results:"
+Write-Verbose "PowerShell Version: $($EnvTest.PowerShellVersion)"
+Write-Verbose "Is Windows: $($EnvTest.IsWindows)"
+Write-Verbose "Platform: $($EnvTest.Platform)"
+Write-Verbose "Speech Available: $($EnvTest.SpeechAvailable)"
+Write-Verbose "OpenAI Key Present: $($EnvTest.OpenAIKeyPresent)"

@@ -8,11 +8,14 @@ function Start-VoiceCommand {
         [string]$LogPath = "$env:USERPROFILE\VoiceCommander\logs",
 
         [Parameter()]
+        [switch]$TextOnly,
+
+        [Parameter()]
         [switch]$Verbose
     )
 
     begin {
-        Write-Verbose "Starting Command Processor..."
+        Write-Verbose "Starting Voice Commander..."
 
         # Validate OpenAI API Key
         if ([string]::IsNullOrEmpty($OpenAIKey)) {
@@ -25,9 +28,29 @@ function Start-VoiceCommand {
             Write-Verbose "Created log directory: $LogPath"
         }
 
-        Write-Host "Command Processor initialized successfully." -ForegroundColor Green
-        Write-Host "Type your commands in natural language. Type 'exit' to quit." -ForegroundColor Cyan
-        Write-Host "Examples:" -ForegroundColor Yellow
+        # Initialize speech recognition if not in text-only mode
+        $SpeechEngine = $null
+        if (-not $TextOnly) {
+            try {
+                Write-Verbose "Initializing speech recognition engine..."
+                $SpeechEngine = Initialize-SpeechRecognition -ErrorAction Stop
+                if ($null -eq $SpeechEngine) {
+                    Write-Warning "Speech recognition initialization failed. Falling back to text-only mode."
+                    $TextOnly = $true
+                } else {
+                    Write-Host "Voice recognition active! You can speak your commands." -ForegroundColor Green
+                }
+            }
+            catch {
+                Write-Warning "Speech recognition not available: $($_.Exception.Message)"
+                Write-Warning "Falling back to text-only mode."
+                $TextOnly = $true
+            }
+        }
+
+        Write-Host "Voice Commander initialized successfully." -ForegroundColor Green
+        Write-Host "Type 'exit' to quit or press Ctrl+C to terminate." -ForegroundColor Cyan
+        Write-Host "`nAvailable commands examples:" -ForegroundColor Yellow
         Write-Host "- Show me all running processes" -ForegroundColor Cyan
         Write-Host "- List all services" -ForegroundColor Cyan
         Write-Host "- Get computer information" -ForegroundColor Cyan
@@ -37,18 +60,36 @@ function Start-VoiceCommand {
     process {
         while ($true) {
             try {
-                # Get text input
-                Write-Host "`nEnter your command (or 'exit' to quit):" -ForegroundColor Cyan
-                $InputText = Read-Host
+                $InputText = $null
+
+                if ($TextOnly) {
+                    # Text input mode
+                    Write-Host "`nEnter your command (or 'exit' to quit):" -ForegroundColor Cyan
+                    $InputText = Read-Host
+                }
+                else {
+                    # Voice input mode
+                    Write-Host "`nListening... (Say 'exit' to quit)" -ForegroundColor Cyan
+                    $RecognitionResult = $SpeechEngine.Recognize()
+
+                    if ($null -ne $RecognitionResult) {
+                        $InputText = $RecognitionResult.Text
+                        Write-Host "Recognized: $InputText" -ForegroundColor Yellow
+                    }
+                }
 
                 if ([string]::IsNullOrEmpty($InputText)) {
-                    Write-Host "Please enter a command." -ForegroundColor Yellow
+                    if ($TextOnly) {
+                        Write-Host "Please enter a command." -ForegroundColor Yellow
+                    } else {
+                        Write-Host "No speech detected, please try again." -ForegroundColor Yellow
+                    }
                     continue
                 }
 
                 # Check for exit command
                 if ($InputText.Trim().ToLower() -eq "exit") {
-                    Write-Host "Exiting Command Processor..." -ForegroundColor Yellow
+                    Write-Host "Exiting Voice Commander..." -ForegroundColor Yellow
                     break
                 }
 
@@ -105,6 +146,10 @@ function Start-VoiceCommand {
     }
 
     end {
-        Write-Host "Command Processor terminated successfully." -ForegroundColor Green
+        if ($null -ne $SpeechEngine) {
+            Write-Verbose "Cleaning up speech recognition resources..."
+            $SpeechEngine.Dispose()
+        }
+        Write-Host "Voice Commander terminated successfully." -ForegroundColor Green
     }
 }

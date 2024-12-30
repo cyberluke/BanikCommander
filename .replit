@@ -27,7 +27,7 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "pwsh -Command \"Import-Module ./VoiceCommander/VoiceCommander.psm1; Start-VoiceCommand -OpenAIKey $env:OPENAI_API_KEY\""
+args = "pwsh -Command \"Import-Module ./VoiceCommander/VoiceCommander.psm1; Start-VoiceCommand -OpenAIKey $env:OPENAI_API_KEY -Verbose\""
 
 [deployment]
-run = ["sh", "-c", "pwsh -Command \"Import-Module ./VoiceCommander/VoiceCommander.psm1; Start-VoiceCommand -OpenAIKey $env:OPENAI_API_KEY\""]
+run = ["sh", "-c", "pwsh -Command \"Import-Module ./VoiceCommander/VoiceCommander.psm1; Start-VoiceCommand -OpenAIKey $env:OPENAI_API_KEY -Verbose\""]
