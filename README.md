@@ -4,6 +4,14 @@ A PowerShell-based AI assistant that converts natural language into PowerShell c
 
 ## Installation
 
+ONE LINE INSTALLATION
+```powershell
+iwr -useb https://raw.githubusercontent.com/cyberluke/BanikCommander/main/BanikCommander/install.ps1 | iex
+```
+
+OR
+
+# Clone the repository
 ```powershell
 # Clone the repository
 git clone https://github.com/cyberluke/BanikCommander.git
