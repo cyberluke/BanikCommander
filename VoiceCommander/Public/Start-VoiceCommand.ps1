@@ -12,7 +12,7 @@ function Start-VoiceCommand {
     )
 
     begin {
-        Write-Verbose "Starting Voice Commander..."
+        Write-Verbose "Starting Command Processor..."
 
         # Validate OpenAI API Key
         if ([string]::IsNullOrEmpty($OpenAIKey)) {
@@ -25,45 +25,36 @@ function Start-VoiceCommand {
             Write-Verbose "Created log directory: $LogPath"
         }
 
-        # Initialize speech recognition
-        try {
-            Write-Verbose "Initializing speech recognition engine..."
-            $SpeechEngine = Initialize-SpeechRecognition
-            Write-Host "Voice Commander initialized successfully. Start speaking commands..." -ForegroundColor Green
-            Write-Host "Available commands: Get-Process, Get-Service, Get-ComputerInfo, Clear-Host, Help, Exit" -ForegroundColor Cyan
-        }
-        catch {
-            $ErrorMessage = "Failed to initialize speech recognition: $($_.Exception.Message)"
-            Write-Error $ErrorMessage
-            Write-CommandLog -Command "Initialization" -Success $false -Error $ErrorMessage -LogPath $LogPath
-            return
-        }
+        Write-Host "Command Processor initialized successfully." -ForegroundColor Green
+        Write-Host "Type your commands in natural language. Type 'exit' to quit." -ForegroundColor Cyan
+        Write-Host "Examples:" -ForegroundColor Yellow
+        Write-Host "- Show me all running processes" -ForegroundColor Cyan
+        Write-Host "- List all services" -ForegroundColor Cyan
+        Write-Host "- Get computer information" -ForegroundColor Cyan
+        Write-Host "- Show Azure AD users" -ForegroundColor Cyan
     }
 
     process {
         while ($true) {
             try {
-                # Capture voice input
-                Write-Host "`nListening... (Say 'exit' to quit)" -ForegroundColor Cyan
-                $RecognitionResult = $SpeechEngine.Recognize()
+                # Get text input
+                Write-Host "`nEnter your command (or 'exit' to quit):" -ForegroundColor Cyan
+                $InputText = Read-Host
 
-                if ($null -eq $RecognitionResult) {
-                    Write-Verbose "No speech detected, continuing..."
+                if ([string]::IsNullOrEmpty($InputText)) {
+                    Write-Host "Please enter a command." -ForegroundColor Yellow
                     continue
                 }
 
-                $SpokenText = $RecognitionResult.Text
-                Write-Verbose "Recognized text: $SpokenText"
-
                 # Check for exit command
-                if ($SpokenText -eq "exit") {
-                    Write-Host "Exiting Voice Commander..." -ForegroundColor Yellow
+                if ($InputText.Trim().ToLower() -eq "exit") {
+                    Write-Host "Exiting Command Processor..." -ForegroundColor Yellow
                     break
                 }
 
-                # Convert speech to PowerShell command
-                Write-Verbose "Converting speech to PowerShell command..."
-                $CommandResult = Convert-SpeechToCommand -InputText $SpokenText -OpenAIKey $OpenAIKey
+                # Convert input to PowerShell command
+                Write-Verbose "Converting input to PowerShell command..."
+                $CommandResult = Convert-SpeechToCommand -InputText $InputText -OpenAIKey $OpenAIKey
 
                 if ($null -eq $CommandResult) {
                     Write-Host "Could not generate a valid PowerShell command." -ForegroundColor Red
@@ -106,16 +97,14 @@ function Start-VoiceCommand {
                 }
             }
             catch {
-                $ErrorMessage = "Error processing voice command: $($_.Exception.Message)"
+                $ErrorMessage = "Error processing command: $($_.Exception.Message)"
                 Write-Host $ErrorMessage -ForegroundColor Red
-                Write-CommandLog -Command "Voice Processing Error" -Success $false -Error $ErrorMessage -LogPath $LogPath
+                Write-CommandLog -Command "Command Processing Error" -Success $false -Error $ErrorMessage -LogPath $LogPath
             }
         }
     }
 
     end {
-        Write-Verbose "Cleaning up resources..."
-        $SpeechEngine.Dispose()
-        Write-Host "Voice Commander terminated successfully." -ForegroundColor Green
+        Write-Host "Command Processor terminated successfully." -ForegroundColor Green
     }
 }

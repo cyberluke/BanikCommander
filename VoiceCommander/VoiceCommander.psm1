@@ -7,22 +7,6 @@ $VerbosePreference = 'Continue'
 $ModulePath = $PSScriptRoot
 Write-Verbose "Module Path: $ModulePath"
 
-# Verify System.Speech assembly
-try {
-    Write-Verbose "Checking System.Speech assembly..."
-    if (-not ('System.Speech.Recognition.SpeechRecognitionEngine' -as [Type])) {
-        Write-Verbose "Loading System.Speech assembly..."
-        Add-Type -AssemblyName System.Speech
-        Write-Verbose "System.Speech assembly loaded successfully"
-    }
-} catch {
-    Write-Error "Failed to load System.Speech assembly: $($_.Exception.Message)"
-    throw
-}
-
-# Import all public/private functions
-Write-Verbose "Importing functions from $ModulePath"
-
 # Verify directory structure
 $PublicPath = Join-Path $ModulePath 'Public'
 $PrivatePath = Join-Path $ModulePath 'Private'
