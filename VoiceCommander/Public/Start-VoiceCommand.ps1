@@ -132,24 +132,33 @@ function Start-VoiceCommand {
                     $RetryCount = 0
                     $Success = $false
 
+                    # Pre-execution module check
+                    if ($CommandResult.Command -match 'Azure[AD]*') {
+                        Write-Verbose "Azure AD command detected, checking module..."
+                        $ModuleInstalled = Install-RequiredModule -ModuleName 'AzureAD'
+                        if (-not $ModuleInstalled) {
+                            throw "Failed to install AzureAD module"
+                        }
+                    }
+
                     while (-not $Success -and $RetryCount -lt $MaxRetries) {
                         try {
                             Write-Verbose "Attempt $($RetryCount + 1) of $MaxRetries"
 
-                            # Check for Azure AD commands and ensure module is available
-                            if ($CommandResult.Command -match 'Azure[AD]*') {
-                                Write-Verbose "Azure AD command detected, checking module..."
-                                if (-not (Install-RequiredModule -ModuleName 'AzureAD')) {
-                                    throw "Failed to install AzureAD module"
-                                }
-                            }
+                            # Determine command type
+                            $IsFileOperation = $CommandResult.Command -match '(Get-Content|Out-File|Export-Csv)'
+                            Write-Verbose "Is file operation: $IsFileOperation"
 
-                            # Execute command based on type
-                            $IsFileOperation = $CommandResult.Command -match 'Get-Content|Out-File|Export-Csv'
+                            # Execute command
                             $ExecutionResult = Invoke-Expression -Command $CommandResult.Command
+                            Write-Verbose "Command executed successfully"
 
-                            # Handle the output
-                            Handle-CommandOutput -Command $CommandResult.Command -Result $ExecutionResult -IsFileOperation:$IsFileOperation
+                            # Handle the output based on command type
+                            if ($null -ne $ExecutionResult) {
+                                Handle-CommandOutput -Command $CommandResult.Command -Result $ExecutionResult -IsFileOperation:$IsFileOperation
+                            } else {
+                                Write-Host "Command executed successfully but returned no output." -ForegroundColor Yellow
+                            }
 
                             $Success = $true
                             Write-CommandLog -Command $CommandResult.Command -Success $true -LogPath $LogPath
@@ -158,11 +167,18 @@ function Start-VoiceCommand {
                             $ErrorMessage = $_.Exception.Message
                             Write-Verbose "Execution error: $ErrorMessage"
 
-                            if ($ErrorMessage -match "The term '.*' is not recognized as the name of a cmdlet") {
-                                if ($CommandResult.Command -match 'Azure[AD]*') {
-                                    Write-Verbose "Retrying after module installation failure..."
-                                    $RetryCount++
-                                    continue
+                            if ($ErrorMessage -match "The term '.*' is not recognized") {
+                                Write-Verbose "Command not found, attempting module installation..."
+
+                                # Extract module name from command
+                                if ($CommandResult.Command -match '^(.*?)-') {
+                                    $ModuleName = $Matches[1]
+                                    Write-Verbose "Attempting to install module: $ModuleName"
+
+                                    if (Install-RequiredModule -ModuleName $ModuleName) {
+                                        $RetryCount++
+                                        continue
+                                    }
                                 }
                             }
 

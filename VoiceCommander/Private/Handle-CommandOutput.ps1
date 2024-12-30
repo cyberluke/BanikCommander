@@ -3,17 +3,17 @@ function Handle-CommandOutput {
     param (
         [Parameter(Mandatory)]
         [string]$Command,
-        
+
         [Parameter()]
         [object]$Result,
-        
+
         [Parameter()]
         [switch]$IsFileOperation
     )
 
     try {
         Write-Verbose "Handling output for command: $Command"
-        
+
         if ($null -eq $Result) {
             Write-Host "Command executed successfully but returned no output." -ForegroundColor Yellow
             return
@@ -21,12 +21,23 @@ function Handle-CommandOutput {
 
         if ($IsFileOperation) {
             Write-Host "`nFile Content:" -ForegroundColor Green
-            # Convert to string and write directly to host
-            $Result | Out-String -Width 4096 | Write-Host
+            if ($Result -is [string]) {
+                # Split into lines and write each line
+                $Result -split "`n" | ForEach-Object {
+                    Write-Host $_
+                }
+            } else {
+                # Convert to string with maximum width and write directly
+                $Result | Out-String -Width 4096 | ForEach-Object {
+                    if (-not [string]::IsNullOrWhiteSpace($_)) {
+                        Write-Host $_
+                    }
+                }
+            }
         } else {
             Write-Host "`nCommand Output:" -ForegroundColor Green
-            # For regular commands, try to format as table first
             try {
+                # Try to format as table first
                 $FormattedOutput = $Result | Format-Table -AutoSize | Out-String -Width 4096
                 if (-not [string]::IsNullOrWhiteSpace($FormattedOutput)) {
                     Write-Host $FormattedOutput
