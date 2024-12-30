@@ -29,7 +29,17 @@ function Test-CommandSafety {
         'Search-',
         'Test-',
         'Show-',
-        'Read-'
+        'Read-',
+        'Install-Module',
+        'Import-Module'
+    )
+
+    # List of safe file operations
+    $SafeFileOperations = @(
+        'Get-Content',
+        'Out-File',
+        'Export-Csv',
+        'Import-Csv'
     )
 
     $Result = @{
@@ -37,9 +47,20 @@ function Test-CommandSafety {
         Reason = "Command appears safe"
     }
 
+    # Check for explicitly safe file operations
+    foreach ($SafeOp in $SafeFileOperations) {
+        if ($Command -match "^$SafeOp") {
+            return $Result
+        }
+    }
+
     # Check for dangerous commands
     foreach ($DangerousCmd in $DangerousCommands) {
         if ($Command -match $DangerousCmd) {
+            # Special case for Install-Module and Import-Module
+            if ($Command -match '^(Install-Module|Import-Module)') {
+                return $Result
+            }
             $Result.IsSafe = $false
             $Result.Reason = "Command contains potentially dangerous operation: $DangerousCmd"
             return $Result

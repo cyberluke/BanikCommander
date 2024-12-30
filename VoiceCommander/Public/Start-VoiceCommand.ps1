@@ -68,12 +68,10 @@ function Start-VoiceCommand {
                 $InputText = $null
 
                 if ($TextOnly) {
-                    # Text input mode
                     Write-Host "`nEnter your command (or 'exit' to quit):" -ForegroundColor Cyan
                     $InputText = Read-Host
                 }
                 else {
-                    # Voice input mode
                     Write-Host "`nListening... (Say 'exit' to quit)" -ForegroundColor Cyan
                     $RecognitionResult = $SpeechEngine.Recognize()
 
@@ -126,15 +124,62 @@ function Start-VoiceCommand {
                     }
                 }
 
-                # Execute the command
+                # Execute the command with module auto-installation and output handling
                 try {
                     Write-Verbose "Executing command..."
-                    $ExecutionResult = Invoke-Expression -Command $CommandResult.Command
-                    Write-Host "`nCommand Output:" -ForegroundColor Green
-                    $ExecutionResult | Format-Table -AutoSize
+                    $MaxRetries = 2
+                    $RetryCount = 0
+                    $Success = $false
 
-                    # Log the successful command
-                    Write-CommandLog -Command $CommandResult.Command -Success $true -LogPath $LogPath
+                    while (-not $Success -and $RetryCount -lt $MaxRetries) {
+                        try {
+                            $ExecutionResult = Invoke-Expression -Command $CommandResult.Command
+                            $Success = $true
+
+                            # Handle command output
+                            Write-Host "`nCommand Output:" -ForegroundColor Green
+                            if ($null -ne $ExecutionResult) {
+                                if ($CommandResult.Command -match 'Get-Content|Out-File|Export-Csv') {
+                                    # For file operations, ensure content is displayed
+                                    $ExecutionResult | Out-Host
+                                } else {
+                                    # For other commands, use Format-Table with auto-size
+                                    $ExecutionResult | Format-Table -AutoSize | Out-Host
+                                }
+                            } else {
+                                Write-Host "Command executed successfully but returned no output." -ForegroundColor Yellow
+                            }
+
+                            Write-CommandLog -Command $CommandResult.Command -Success $true -LogPath $LogPath
+                        }
+                        catch {
+                            $ErrorMessage = $_.Exception.Message
+
+                            # Check if error is due to missing module
+                            if ($ErrorMessage -match "is not recognized as the name of a cmdlet") {
+                                $ModuleName = if ($CommandResult.Command -match 'Azure[AD]*') { 'AzureAD' } else { $null }
+
+                                if ($null -ne $ModuleName) {
+                                    Write-Host "Required module '$ModuleName' not found. Attempting to install..." -ForegroundColor Yellow
+                                    try {
+                                        Install-Module -Name $ModuleName -Force -AllowClobber -Scope CurrentUser
+                                        Import-Module -Name $ModuleName -Force
+                                        Write-Host "Successfully installed and imported module '$ModuleName'" -ForegroundColor Green
+                                        $RetryCount++
+                                        continue
+                                    }
+                                    catch {
+                                        Write-Error "Failed to install module '$ModuleName': $_"
+                                        break
+                                    }
+                                }
+                            }
+
+                            Write-Host "Error executing command: $ErrorMessage" -ForegroundColor Red
+                            Write-CommandLog -Command $CommandResult.Command -Success $false -Error $ErrorMessage -LogPath $LogPath
+                            break
+                        }
+                    }
                 }
                 catch {
                     $ErrorMessage = "Error executing command: $($_.Exception.Message)"
