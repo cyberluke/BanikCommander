@@ -15,6 +15,8 @@ function Start-Banik {
     begin {
         Write-Verbose "Starting BANIK Commander..."
 
+        
+
         # Initialize required modules and track connection state
         Write-Verbose "Initializing required modules..."
         Initialize-RequiredModules
@@ -56,6 +58,19 @@ function Start-Banik {
             }
         }
 
+        # Display image using terminal graphics
+
+                # Fallback to ASCII art
+                Write-Host @"
+    ____              _ _    
+   |  _ \            (_) |   
+   | |_) | __ _ _ __  _| | __
+   |  _ < / _' | '_ \| | |/ /
+   | |_) | (_| | | | | |   < 
+   |____/ \__,_|_| |_|_|_|\_\
+   Commander v1.0
+"@ -ForegroundColor Cyan
+          
         Write-Host "BANIK Commander initialized successfully." -ForegroundColor Green
         Write-Host "Type 'exit' to quit or press Ctrl+C to terminate." -ForegroundColor Cyan
         Write-Host "`nAvailable commands examples:" -ForegroundColor Yellow
