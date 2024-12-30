@@ -125,21 +125,11 @@ function Start-VoiceCommand {
                     }
                 }
 
-                # Execute the command with module auto-installation and output handling
                 try {
                     Write-Verbose "Executing command..."
                     $MaxRetries = 2
                     $RetryCount = 0
                     $Success = $false
-
-                    # Pre-execution module check for known modules
-                    if ($CommandResult.Command -match 'Azure[AD]*') {
-                        Write-Verbose "Azure AD command detected, checking module..."
-                        $ModuleInstalled = Install-RequiredModule -ModuleName 'AzureAD'
-                        if (-not $ModuleInstalled) {
-                            throw "Failed to install AzureAD module"
-                        }
-                    }
 
                     while (-not $Success -and $RetryCount -lt $MaxRetries) {
                         try {
@@ -170,19 +160,46 @@ function Start-VoiceCommand {
                             Write-Verbose "Execution error: $ErrorMessage"
                             Write-Verbose "Exception type: $($_.Exception.GetType().Name)"
 
-                            if ($ErrorMessage -match "The term '.*' is not recognized") {
-                                Write-Verbose "Command not found, attempting module installation..."
+                            # Enhanced module detection from error message
+                            $ModuleName = $null
 
-                                # Extract module name from command
-                                if ($CommandResult.Command -match '^(.*?)-') {
-                                    $ModuleName = $Matches[1]
-                                    Write-Verbose "Attempting to install module: $ModuleName"
+                            # Pattern 1: Direct module reference
+                            if ($ErrorMessage -match "The term '([\w\-\.]+)' is not recognized") {
+                                $CommandName = $Matches[1]
+                                Write-Verbose "Unrecognized command: $CommandName"
 
-                                    if (Install-RequiredModule -ModuleName $ModuleName) {
-                                        Write-Host "Required module installed. Retrying command..." -ForegroundColor Yellow
-                                        $RetryCount++
-                                        continue
-                                    }
+                                # Try different patterns to extract module name
+                                switch -Regex ($CommandName) {
+                                    '^([\w\.]+)-' { $ModuleName = $Matches[1] }
+                                    '^Get-(Azure[\w]+)' { $ModuleName = 'Azure' }
+                                    '^Get-(AD[\w]+)' { $ModuleName = 'AD' }
+                                    '^Get-(MS[\w]+)' { $ModuleName = 'MSOnline' }
+                                    '^Get-(SPO[\w]+)' { $ModuleName = 'SharePoint' }
+                                    '^Get-(PnP[\w]+)' { $ModuleName = 'PnP' }
+                                    # Add more specific Azure patterns
+                                    'Get-AzureAD[\w]+' { $ModuleName = 'AzureAD' }
+                                    'Get-AzureRM[\w]+' { $ModuleName = 'AzureRM' }
+                                    'Get-Az[\w]+' { $ModuleName = 'Az' }
+                                }
+                            }
+                            # Pattern 2: Missing assembly reference
+                            elseif ($ErrorMessage -match "Could not load file or assembly '([\w\.]+)'") {
+                                $ModuleName = $Matches[1]
+                            }
+                            # Pattern 3: Missing module dependency
+                            elseif ($ErrorMessage -match "(The specified module|Module) '([\w\.]+)' was not loaded") {
+                                $ModuleName = $Matches[2]
+                            }
+
+                            if ($ModuleName) {
+                                Write-Verbose "Attempting to install module: $ModuleName"
+                                $InstallResult = Install-RequiredModule -ModuleName $ModuleName
+                                if ($InstallResult) {
+                                    Write-Host "Required module $ModuleName installed. Retrying command..." -ForegroundColor Yellow
+                                    $RetryCount++
+                                    continue
+                                } else {
+                                    Write-Warning "Failed to install module $ModuleName. Command execution may fail."
                                 }
                             }
 
