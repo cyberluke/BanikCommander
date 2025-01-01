@@ -100,12 +100,43 @@ function Start-Banik {
                     $InputText = Read-Host
                 }
                 else {
-                    Write-Host "`nListening... (Say 'exit' to quit)" -ForegroundColor Cyan
-                    $RecognitionResult = $SpeechEngine.Recognize()
+                    Write-Host "`nListening... (Say your command and end with 'banik' or 'baník' to execute)" -ForegroundColor Cyan
+                    $buffer = ""
+                    $triggerWords = @('banik', 'baník')
 
-                    if ($null -ne $RecognitionResult) {
-                        $InputText = $RecognitionResult.Text
-                        Write-Host "Recognized: $InputText" -ForegroundColor Yellow
+                    while ($true) {
+                        $RecognitionResult = $SpeechEngine.Recognize()
+
+                        if ($null -ne $RecognitionResult) {
+                            $recognizedText = $RecognitionResult.Text.Trim().ToLower()
+                            Write-Host "Heard: $recognizedText" -ForegroundColor DarkGray
+
+                            # Check if it's just the exit command
+                            if ($recognizedText -eq "exit") {
+                                $InputText = "exit"
+                                break
+                            }
+
+                            # Check if the phrase ends with trigger word
+                            $endsWithTrigger = $false
+                            foreach ($trigger in $triggerWords) {
+                                if ($recognizedText -match "$trigger$") {
+                                    $endsWithTrigger = $true
+                                    # Remove the trigger word from the end
+                                    $InputText = $recognizedText -replace "$trigger$", ""
+                                    Write-Host "Recognized command: $InputText" -ForegroundColor Yellow
+                                    break
+                                }
+                            }
+
+                            if ($endsWithTrigger) {
+                                break
+                            }
+                            else {
+                                # If no trigger word, continue listening
+                                continue
+                            }
+                        }
                     }
                 }
 
