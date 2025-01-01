@@ -9,7 +9,7 @@
     DotNetFrameworkVersion = '4.7.2'
     FunctionsToExport = @(
         'Start-Banik',
-        'Set-OpenAIConfig',
+        'Set-NANOTRIKAIConfig',
         'Get-BanikCommanderConfig'
     )
     CmdletsToExport = @()
@@ -29,7 +29,7 @@
         'BanikCommander.psm1',
         'BanikCommander.psd1',
         'Public\Start-Banik.ps1',
-        'Public\Set-OpenAIConfig.ps1',
+        'Public\Set-NANOTRIKAIConfig.ps1',
         'Private\Convert-SpeechToCommand.ps1',
         'Private\Get-BanikCommanderConfig.ps1',
         'Private\Handle-CommandOutput.ps1',

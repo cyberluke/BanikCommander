@@ -10,7 +10,7 @@ function Get-BanikCommanderConfig {
         # Check if config exists
         if (-not (Test-Path -Path $ConfigFile)) {
             Write-Verbose "No configuration found at: $ConfigFile"
-            Write-Host "Configuration not found. Use Set-OpenAIConfig to configure your API key." -ForegroundColor Yellow
+            Write-Host "Configuration not found. Use Set-NANOTRIKAIConfig to configure your API key." -ForegroundColor Yellow
             return $null
         }
 
@@ -35,7 +35,7 @@ function Get-BanikCommanderConfig {
         }
         catch {
             Write-Error "Failed to read or decrypt configuration: $_"
-            Write-Host "Configuration appears corrupted. Please reconfigure using Set-OpenAIConfig." -ForegroundColor Red
+            Write-Host "Configuration appears corrupted. Please reconfigure using Set-NANOTRIKAIConfig." -ForegroundColor Red
             return $null
         }
         finally {

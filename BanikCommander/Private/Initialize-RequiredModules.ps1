@@ -2,6 +2,11 @@ function Initialize-RequiredModules {
     [CmdletBinding()]
     param()
 
+    # Default empty array - modules can be configured by user
+    $RequiredModules = @()
+
+    # Default configuration - commented out for reference
+    <#
     $RequiredModules = @(
         if ($PSVersionTable.PSEdition -eq 'Core') {
             'Microsoft.Graph'
@@ -11,6 +16,7 @@ function Initialize-RequiredModules {
         'MSOnline'
         'MicrosoftTeams'
     )
+    #>
 
     foreach ($module in $RequiredModules) {
         try {

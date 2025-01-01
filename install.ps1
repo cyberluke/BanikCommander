@@ -81,3 +81,20 @@ else {
 Write-Host "`nInstallation completed successfully!" -ForegroundColor Green
 Write-Host "You can now import the module using:" -ForegroundColor Cyan
 Write-Host "Import-Module .\BanikCommander\BanikCommander.psm1 -Force" -ForegroundColor White 
+
+Write-Host "`nWould you like to install BanikCommander as a permanent module?" -ForegroundColor Yellow
+Write-Host "This will:" -ForegroundColor Cyan
+Write-Host "1. Copy the module to your PowerShell modules directory" -ForegroundColor Cyan
+Write-Host "2. Add it to your PowerShell profile for automatic import" -ForegroundColor Cyan
+$response = Read-Host "Install as permanent module? (Y/N)"
+
+if ($response -eq 'Y') {
+    try {
+        # Run the module installation script
+        & (Join-Path $PSScriptRoot "install-module.ps1")
+    }
+    catch {
+        Write-Error "Failed to install module permanently: $_"
+        Write-Host "You can still use the module from its current location." -ForegroundColor Yellow
+    }
+} 

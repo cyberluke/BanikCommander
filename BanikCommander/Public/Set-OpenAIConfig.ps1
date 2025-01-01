@@ -1,11 +1,11 @@
-function Set-OpenAIConfig {
+function Set-NANOTRIKAIConfig {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
         [string]$ApiKey
     )
 
-    Write-Host "Configuring OpenAI API key..." -ForegroundColor Cyan
+    Write-Host "Configuring NANOTRIK.AI API key..." -ForegroundColor Cyan
 
     # Basic validation of API key format
     if (-not ($ApiKey -match '^sk-[A-Za-z0-9_]+$')) {
@@ -33,17 +33,17 @@ function Set-OpenAIConfig {
 
     $Result = Set-VoiceCommanderConfig -OpenAIKey $ApiKey
     if ($Result) {
-        Write-Host "OpenAI API key configured successfully." -ForegroundColor Green
+        Write-Host "NANOTRIK.AI API key configured successfully." -ForegroundColor Green
         Write-Host "You can now use Start-Banik without specifying the API key." -ForegroundColor Cyan
         Write-Host "Configuration stored securely in $env:USERPROFILE\.banikcommander" -ForegroundColor Gray
 
         # Verify the configuration can be read back
         $Config = Get-BanikCommanderConfig
         if ($null -eq $Config) {
-            Write-Warning "Configuration was saved but could not be verified. You may need to run Set-OpenAIConfig again."
+            Write-Warning "Configuration was saved but could not be verified. You may need to run Set-NANOTRIKAIConfig again."
         }
     }
     else {
-        Write-Error "Failed to configure OpenAI API key. Please try again or check the error message above."
+        Write-Error "Failed to configure NANOTRIK.AI API key. Please try again or check the error message above."
     }
 }

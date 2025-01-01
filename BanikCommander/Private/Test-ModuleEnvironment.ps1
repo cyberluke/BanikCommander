@@ -40,11 +40,11 @@ function Test-ModuleEnvironment {
             }
         }
         catch {
-            Write-Warning "Failed to read OpenAI configuration: $($_.Exception.Message)"
+            Write-Warning "Failed to read NANOTRIK.AI configuration: $($_.Exception.Message)"
         }
     } else {
         Write-Warning "No configuration found at: $($Results.ConfigurationPath)"
-        Write-Host "Use 'Set-OpenAIConfig -ApiKey your-api-key' to configure the OpenAI API key" -ForegroundColor Yellow
+        Write-Host "Use 'Set-NANOTRIKAIConfig -ApiKey your-api-key' to configure the NANOTRIK.AI API key" -ForegroundColor Yellow
     }
 
     return [PSCustomObject]$Results

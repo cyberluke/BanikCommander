@@ -25,7 +25,7 @@ function Start-Banik {
 
         # Initialize required modules and track connection state
         Write-Verbose "Initializing required modules..."
-        # Initialize-RequiredModules
+        Initialize-RequiredModules
         $script:GraphConnected = $false
 
         # Get API key from parameter or config
@@ -33,7 +33,7 @@ function Start-Banik {
             Write-Verbose "No API key provided, attempting to load from configuration..."
             $Config = Get-BanikCommanderConfig
             if ($null -eq $Config -or [string]::IsNullOrEmpty($Config.OpenAIKey)) {
-                throw "OpenAI API Key not found. Please configure it using Set-OpenAIConfig first."
+                throw "NANOTRIK.AI API Key not found. Please configure it using Set-NANOTRIKAIConfig first."
             }
             $OpenAIKey = $Config.OpenAIKey
         }

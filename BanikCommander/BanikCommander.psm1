@@ -55,8 +55,8 @@ try {
 
     # Display configuration status
     if (-not $EnvTest.ConfigurationValid) {
-        Write-Warning "OpenAI API key is not configured. Use Set-OpenAIConfig to set up your API key."
-        Write-Host "Example: Set-OpenAIConfig -ApiKey 'your-openai-api-key'" -ForegroundColor Cyan
+        Write-Warning "OpenAI API key is not configured. Use Set-NANOTRIKAIConfig to set up your API key."
+        Write-Host "Example: Set-NANOTRIKAIConfig -ApiKey 'your-openai-api-key'" -ForegroundColor Cyan
     }
 }
 catch {
