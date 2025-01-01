@@ -7,55 +7,41 @@ $VerbosePreference = 'Continue'
 $ModulePath = $PSScriptRoot
 Write-Verbose "Module Path: $ModulePath"
 
-# Import all functions
-$PublicFunctions = @()
-$PrivateFunctions = @()
-
 # Import private functions
-$PrivatePath = Join-Path -Path $ModulePath -ChildPath 'Private'
-if (Test-Path -Path $PrivatePath) {
-    Write-Verbose "Importing private functions from: $PrivatePath"
-    $PrivateFiles = Get-ChildItem -Path $PrivatePath -Filter '*.ps1' -ErrorAction Stop
-    foreach ($File in $PrivateFiles) {
-        try {
-            Write-Verbose "Importing private function: $($File.Name)"
-            . $File.FullName
-            $PrivateFunctions += $File.BaseName
-        }
-        catch {
-            Write-Error "Failed to import private function $($File.Name): $_"
-            throw
-        }
+Write-Verbose "Importing private functions from: $ModulePath\Private"
+$PrivateFunctions = Get-ChildItem -Path "$ModulePath\Private\*.ps1" -ErrorAction SilentlyContinue
+
+foreach ($Private in $PrivateFunctions) {
+    try {
+        Write-Verbose "Importing private function: $($Private.Name)"
+        . $Private.FullName
     }
-} else {
-    Write-Error "Private functions directory not found at: $PrivatePath"
-    throw "Module structure is invalid."
+    catch {
+        Write-Error "Failed to import private function $($Private.Name): $_"
+    }
 }
 
 # Import public functions
-$PublicPath = Join-Path -Path $ModulePath -ChildPath 'Public'
-if (Test-Path -Path $PublicPath) {
-    Write-Verbose "Importing public functions from: $PublicPath"
-    $PublicFiles = Get-ChildItem -Path $PublicPath -Filter '*.ps1' -ErrorAction Stop
-    foreach ($File in $PublicFiles) {
-        try {
-            Write-Verbose "Importing public function: $($File.Name)"
-            . $File.FullName
-            $PublicFunctions += $File.BaseName
-        }
-        catch {
-            Write-Error "Failed to import public function $($File.Name): $_"
-            throw
-        }
+Write-Verbose "Importing public functions from: $ModulePath\Public"
+$PublicFunctions = Get-ChildItem -Path "$ModulePath\Public\*.ps1" -ErrorAction SilentlyContinue
+
+foreach ($Public in $PublicFunctions) {
+    try {
+        Write-Verbose "Importing public function: $($Public.Name)"
+        . $Public.FullName
     }
-} else {
-    Write-Error "Public functions directory not found at: $PublicPath"
-    throw "Module structure is invalid."
+    catch {
+        Write-Error "Failed to import public function $($Public.Name): $_"
+    }
 }
 
 # Export public functions
-Write-Verbose "Public functions found: $($PublicFunctions -join ', ')"
-Export-ModuleMember -Function $PublicFunctions
+$PublicFunctions | ForEach-Object {
+    Export-ModuleMember -Function $_.BaseName
+}
+
+# Export any aliases
+Export-ModuleMember -Alias *
 
 # Run environment tests
 try {

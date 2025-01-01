@@ -8,7 +8,13 @@ function Start-Banik {
         [string]$LogPath = "$env:USERPROFILE\BanikCommander\logs",
 
         [Parameter()]
-        [switch]$TextOnly
+        [switch]$TextOnly,
+
+        [Parameter()]
+        [switch]$Preview,
+
+        [Parameter()]
+        [string]$AutoPrompt
 
     )
 
@@ -19,7 +25,7 @@ function Start-Banik {
 
         # Initialize required modules and track connection state
         Write-Verbose "Initializing required modules..."
-        Initialize-RequiredModules
+        # Initialize-RequiredModules
         $script:GraphConnected = $false
 
         # Get API key from parameter or config
@@ -43,12 +49,12 @@ function Start-Banik {
         if (-not $TextOnly) {
             try {
                 Write-Verbose "Initializing speech recognition engine..."
-                $SpeechEngine = Initialize-SpeechRecognition -ErrorAction Stop
+                $SpeechEngine = Initialize-SpeechRecognition -Culture "cs-CZ" -ErrorAction Stop
                 if ($null -eq $SpeechEngine) {
                     Write-Warning "Speech recognition initialization failed. Falling back to text-only mode."
                     $TextOnly = $true
                 } else {
-                    Write-Host "Voice recognition active! You can speak your commands." -ForegroundColor Green
+                    Write-Host "Hlasové ovládání aktivní! Můžete mluvit své příkazy." -ForegroundColor Green
                 }
             }
             catch {
@@ -86,7 +92,10 @@ function Start-Banik {
             try {
                 $InputText = $null
 
-                if ($TextOnly) {
+                if ($Preview -and -not [string]::IsNullOrEmpty($AutoPrompt)) {
+                    $InputText = $AutoPrompt
+                }
+                elseif ($TextOnly) {
                     Write-Host "`nEnter your command (or 'exit' to quit):" -ForegroundColor Cyan
                     $InputText = Read-Host
                 }
@@ -121,12 +130,48 @@ function Start-Banik {
 
                 if ($null -eq $CommandResult) {
                     Write-Host "Could not generate a valid PowerShell command." -ForegroundColor Red
+                    if ($Preview) { exit 1 }
                     continue
                 }
 
                 # Display the generated command
                 Write-Host "`nGenerated Command:" -ForegroundColor Yellow
                 Write-Host $CommandResult.Command -ForegroundColor Cyan
+
+                # In preview mode, exit after showing the command
+                if ($Preview) {
+                    try {
+                        Write-Verbose "Converting input to PowerShell command..."
+                        $CommandResult = Convert-SpeechToCommand -InputText $InputText -OpenAIKey $OpenAIKey
+
+                        if ($null -eq $CommandResult) {
+                            Write-Error "Could not generate a valid PowerShell command."
+                            return @{
+                                Success = $false
+                                GeneratedCommand = $null
+                            }
+                        }
+
+                        # Display the generated command
+                        Write-Host "`nGenerated Command:" -ForegroundColor Yellow
+                        Write-Host $CommandResult.Command -ForegroundColor Cyan
+
+                        Write-CommandLog -Command $CommandResult.Command -Success $true -LogPath $LogPath
+                        
+                        # Return the result object
+                        return @{
+                            Success = $true
+                            GeneratedCommand = $CommandResult.Command
+                        }
+                    }
+                    catch {
+                        Write-Error "Failed to generate command: $_"
+                        return @{
+                            Success = $false
+                            GeneratedCommand = $null
+                        }
+                    }
+                }
 
                 # Test command safety
                 Write-Verbose "Testing command safety..."
