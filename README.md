@@ -1,6 +1,9 @@
 # Banik Commander
 
-A PowerShell-based voice and text command assistant powered by NANOTRIK.AI.
+A PowerShell-based voice and text command assistant made for my father Tomas.
+
+![Banik Commander Ostrava](banik.jpg)
+
 
 ## Features
 
