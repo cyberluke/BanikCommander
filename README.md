@@ -86,7 +86,7 @@ This will:
 
 - PowerShell 7.0 or later
 - Windows (for voice recognition)
-- NANOTRIK.AI API key
+- OpenAI API key
 - Git (automatically installed if missing)
 - Czech language pack (for Czech voice recognition)
 
